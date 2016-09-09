@@ -20,6 +20,7 @@ type event int
 const (
 	HandShake event = iota
 	Message
+	Error
 )
 
 type Record struct {
@@ -29,6 +30,7 @@ type Record struct {
 }
 
 func client(cfg *websocket.Config, done chan bool, wg *sync.WaitGroup, output chan []Record) {
+	defer wg.Done()
 	history := make([]Record, 0, 1024)
 	ts := time.Now()
 	conn, err := websocket.DialConfig(cfg)
@@ -36,30 +38,37 @@ func client(cfg *websocket.Config, done chan bool, wg *sync.WaitGroup, output ch
 	history = append(history, Record{Event: HandShake, TimeStamp: ts, Latency: latency})
 
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error dialing: %v\n", err)
+		history = append(history, Record{Event: Error, TimeStamp: ts, Latency: 0})
+		output <- history
+		return
 	}
 
+loop:
 	for {
 		select {
 		case <-done:
-			output <- history
-			wg.Done()
-			return
+			break loop
 		default:
 			ts := time.Now()
 			_, err = conn.Write(bytes.Repeat([]byte("b"), 33))
 			if err != nil {
-				log.Fatal(err)
+				log.Printf("Error writing: %v\n", err)
+				history = append(history, Record{Event: Error, TimeStamp: ts, Latency: 0})
+				break loop
 			}
 			var msg = make([]byte, 512)
 			if _, err = conn.Read(msg); err != nil {
-				log.Fatal(err)
+				log.Printf("Error reading: %v\n", err)
+				history = append(history, Record{Event: Error, TimeStamp: ts, Latency: 0})
+				break loop
 			}
 			latency := time.Since(ts).Seconds()
 			history = append(history, Record{Event: Message, TimeStamp: ts, Latency: latency})
 			time.Sleep(time.Second)
 		}
 	}
+	output <- history
 }
 
 func publish(history *[]Record) {
