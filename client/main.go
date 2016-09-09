@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"sync"
 	"time"
 
 	"golang.org/x/net/websocket"
@@ -27,11 +28,12 @@ type Record struct {
 	Latency   float64
 }
 
-func client(cfg *websocket.Config, done chan bool, history chan Record) {
+func client(cfg *websocket.Config, done chan bool, wg *sync.WaitGroup, output chan []Record) {
+	history := make([]Record, 1024)
 	ts := time.Now()
 	conn, err := websocket.DialConfig(cfg)
 	latency := time.Since(ts).Seconds()
-	history <- Record{Event: HandShake, TimeStamp: ts, Latency: latency}
+	history = append(history, Record{Event: HandShake, TimeStamp: ts, Latency: latency})
 
 	if err != nil {
 		log.Fatal(err)
@@ -40,6 +42,8 @@ func client(cfg *websocket.Config, done chan bool, history chan Record) {
 	for {
 		select {
 		case <-done:
+			output <- history
+			wg.Done()
 			return
 		default:
 			ts := time.Now()
@@ -52,7 +56,7 @@ func client(cfg *websocket.Config, done chan bool, history chan Record) {
 				log.Fatal(err)
 			}
 			latency := time.Since(ts).Seconds()
-			history <- Record{Event: Message, TimeStamp: ts, Latency: latency}
+			history = append(history, Record{Event: Message, TimeStamp: ts, Latency: latency})
 			time.Sleep(time.Second)
 		}
 	}
@@ -83,23 +87,26 @@ func main() {
 	cfg, _ := websocket.NewConfig(url.String(), "http://localhost")
 
 	done := make(chan bool)
-	history := make(chan Record, 10240)
-	fmt.Println("running")
+	var wg = new(sync.WaitGroup)
+	output := make(chan []Record, maxclients+1)
+
 	for i := 0; i < maxclients; i++ {
-		go client(cfg, done, history)
+		wg.Add(1)
+		go client(cfg, done, wg, output)
 		time.Sleep(10 * time.Millisecond)
 		fmt.Printf("%d\n", i)
 	}
-	output := new([]Record)
-	timer := time.After(time.Duration(duration) * time.Second)
+	time.Sleep(time.Duration(duration) * time.Second)
+	close(done)
+	wg.Wait()
+	ret := new([]Record)
 	for {
 		select {
-		case <-timer:
-			done <- true
-			publish(output)
+		case v := <-output:
+			*ret = append(*ret, v...)
+		default:
+			publish(ret)
 			return
-		case v := <-history:
-			*output = append(*output, v)
 		}
 	}
 }
