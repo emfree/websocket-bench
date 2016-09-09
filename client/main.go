@@ -9,6 +9,8 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,8 +27,9 @@ const (
 
 type Record struct {
 	Event     event
-	TimeStamp time.Time
+	TimeStamp int64
 	Latency   float64
+	Tid       int
 }
 
 func client(cfg *websocket.Config, done chan bool, wg *sync.WaitGroup, output chan []Record) {
@@ -35,11 +38,11 @@ func client(cfg *websocket.Config, done chan bool, wg *sync.WaitGroup, output ch
 	ts := time.Now()
 	conn, err := websocket.DialConfig(cfg)
 	latency := time.Since(ts).Seconds()
-	history = append(history, Record{Event: HandShake, TimeStamp: ts, Latency: latency})
+	history = append(history, Record{Event: HandShake, TimeStamp: ts.UnixNano(), Latency: latency})
 
 	if err != nil {
 		log.Printf("Error dialing: %v\n", err)
-		history = append(history, Record{Event: Error, TimeStamp: ts, Latency: 0})
+		history = append(history, Record{Event: Error, TimeStamp: ts.UnixNano(), Latency: 0})
 		output <- history
 		return
 	}
@@ -51,20 +54,26 @@ loop:
 			break loop
 		default:
 			ts := time.Now()
-			_, err = conn.Write(bytes.Repeat([]byte("b"), 33))
+			_, err = conn.Write(bytes.Repeat([]byte(" "), 33))
 			if err != nil {
 				log.Printf("Error writing: %v\n", err)
-				history = append(history, Record{Event: Error, TimeStamp: ts, Latency: 0})
+				history = append(history, Record{Event: Error, TimeStamp: ts.UnixNano(), Latency: 0})
 				break loop
 			}
 			var msg = make([]byte, 512)
-			if _, err = conn.Read(msg); err != nil {
+			var respLength int
+			respLength, err = conn.Read(msg)
+			if err != nil {
 				log.Printf("Error reading: %v\n", err)
-				history = append(history, Record{Event: Error, TimeStamp: ts, Latency: 0})
+				history = append(history, Record{Event: Error, TimeStamp: ts.UnixNano(), Latency: 0})
 				break loop
 			}
+			tid, err := strconv.Atoi(strings.TrimSpace(string(msg[:respLength])))
+			if err != nil {
+				tid = 0
+			}
 			latency := time.Since(ts).Seconds()
-			history = append(history, Record{Event: Message, TimeStamp: ts, Latency: latency})
+			history = append(history, Record{Event: Message, TimeStamp: ts.UnixNano(), Latency: latency, Tid: tid})
 			time.Sleep(time.Second)
 		}
 	}
