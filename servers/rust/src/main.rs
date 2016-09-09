@@ -6,7 +6,7 @@ use websocket::message::Type;
 use websocket::header::WebSocketProtocol;
 
 fn main() {
-    let server = Server::bind("127.0.0.1:8001").unwrap();
+    let server = Server::bind("0.0.0.0:8001").unwrap();
 
     for connection in server {
         // Spawn a new thread for each connection.
