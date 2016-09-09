@@ -10,7 +10,7 @@ fn main() {
 
     for connection in server {
         // Spawn a new thread for each connection.
-        thread::spawn(move || {
+        thread::Builder::new().stack_size(2 * 1024 * 1024).spawn(move || {
             let request = connection.unwrap().read_request().unwrap(); // Get the request
             let headers = request.headers.clone(); // Keep the headers so we can check them
 
