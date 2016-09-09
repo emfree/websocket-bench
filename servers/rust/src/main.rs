@@ -1,5 +1,7 @@
 extern crate websocket;
+extern crate  libc;
 
+use std::iter;
 use std::thread;
 use websocket::{Server, Message, Sender, Receiver};
 use websocket::message::Type;
@@ -46,11 +48,19 @@ fn main() {
                         println!("Client {} disconnected", ip);
                         return;
                     }
-                    Type::Ping => {
-                        let message = Message::pong(message.payload);
-                        sender.send_message(&message).unwrap();
+                    _ => {
+                        let cpu_num;
+                        unsafe {
+                            cpu_num = libc::sched_getcpu();
+                        }
+                        let mut resp_payload = format!("{}", cpu_num);
+                        let padding_len = message.payload.len() - resp_payload.len();
+                        let padding: String = iter::repeat(" ").take(padding_len).collect();
+                        resp_payload = resp_payload + &padding;
+
+                        let resp = Message::text(resp_payload);
+                        sender.send_message(&resp).unwrap()
                     }
-                    _ => sender.send_message(&message).unwrap(),
                 }
             }
         });
