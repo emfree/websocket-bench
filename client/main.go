@@ -29,7 +29,7 @@ type Record struct {
 }
 
 func client(cfg *websocket.Config, done chan bool, wg *sync.WaitGroup, output chan []Record) {
-	history := make([]Record, 1024)
+	history := make([]Record, 0, 1024)
 	ts := time.Now()
 	conn, err := websocket.DialConfig(cfg)
 	latency := time.Since(ts).Seconds()
