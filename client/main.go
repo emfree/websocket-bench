@@ -32,7 +32,7 @@ type Record struct {
 	Tid       int
 }
 
-func client(cfg *websocket.Config, done chan bool, wg *sync.WaitGroup, output chan []Record) {
+func client(cfg *websocket.Config, done chan bool, wg *sync.WaitGroup, output chan []Record, interval time.Duration) {
 	defer wg.Done()
 	history := make([]Record, 0, 1024)
 	ts := time.Now()
@@ -74,7 +74,7 @@ loop:
 			}
 			latency := time.Since(ts).Seconds()
 			history = append(history, Record{Event: Message, TimeStamp: ts.UnixNano(), Latency: latency, Tid: tid})
-			time.Sleep(time.Second)
+			time.Sleep(interval)
 		}
 	}
 	output <- history
@@ -98,11 +98,15 @@ func main() {
 	var port string
 	flag.StringVar(&port, "port", "8000", "")
 
+	var i float64
+	flag.Float64Var(&i, "interval", 1., "sleep interval (seconds)")
+
 	flag.Parse()
 
 	target := net.JoinHostPort(host, port)
 	url := url.URL{Scheme: "ws", Host: target, Path: "/"}
 	cfg, _ := websocket.NewConfig(url.String(), "http://localhost")
+	interval := time.Duration(int64(i*1000)) * time.Millisecond
 
 	done := make(chan bool)
 	var wg = new(sync.WaitGroup)
@@ -110,7 +114,7 @@ func main() {
 
 	for i := 0; i < maxclients; i++ {
 		wg.Add(1)
-		go client(cfg, done, wg, output)
+		go client(cfg, done, wg, output, interval)
 		time.Sleep(10 * time.Millisecond)
 		fmt.Printf("%d\n", i)
 	}
