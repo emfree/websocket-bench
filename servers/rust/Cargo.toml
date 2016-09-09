@@ -1,0 +1,7 @@
+[package]
+name = "wsserver"
+version = "0.1.0"
+authors = ["emfree <freemaneben@gmail.com>"]
+
+[dependencies]
+websocket = "*"
