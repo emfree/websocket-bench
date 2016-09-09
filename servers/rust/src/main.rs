@@ -34,8 +34,6 @@ fn main() {
                 .peer_addr()
                 .unwrap();
 
-            println!("Connection from {}", ip);
-
             let (mut sender, mut receiver) = client.split();
             sender.get_mut().set_nodelay(true);
 
