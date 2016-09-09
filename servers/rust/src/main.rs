@@ -37,6 +37,7 @@ fn main() {
             println!("Connection from {}", ip);
 
             let (mut sender, mut receiver) = client.split();
+            sender.get_mut().set_nodelay(true);
 
             for message in receiver.incoming_messages() {
                 let message: Message = message.unwrap();
