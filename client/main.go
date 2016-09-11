@@ -32,11 +32,12 @@ type Record struct {
 	Tid       int
 }
 
-func client(cfg *websocket.Config, done chan bool, wg *sync.WaitGroup, output chan []Record, interval time.Duration) {
+func client(idx int, cfg *websocket.Config, done chan bool, wg *sync.WaitGroup, output chan []Record, interval time.Duration) {
 	defer wg.Done()
 	history := make([]Record, 0, 1024)
 	ts := time.Now()
 	conn, err := websocket.DialConfig(cfg)
+	fmt.Printf("%d: Connected\n", idx)
 	latency := time.Since(ts).Seconds()
 	history = append(history, Record{Event: HandShake, TimeStamp: ts.UnixNano(), Latency: latency})
 
@@ -114,9 +115,8 @@ func main() {
 
 	for i := 0; i < maxclients; i++ {
 		wg.Add(1)
-		go client(cfg, done, wg, output, interval)
+		go client(i, cfg, done, wg, output, interval)
 		time.Sleep(10 * time.Millisecond)
-		fmt.Printf("%d\n", i)
 	}
 	time.Sleep(time.Duration(duration) * time.Second)
 	close(done)
