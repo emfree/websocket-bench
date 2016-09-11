@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"net/url"
 	"os"
 	"strconv"
@@ -112,6 +114,9 @@ func main() {
 	done := make(chan bool)
 	var wg = new(sync.WaitGroup)
 	output := make(chan []Record, maxclients+1)
+
+	// Run pprof server
+	go http.ListenAndServe("localhost:6060", nil)
 
 	for i := 0; i < maxclients; i++ {
 		wg.Add(1)
