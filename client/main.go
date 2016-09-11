@@ -37,9 +37,6 @@ func client(idx int, cfg *websocket.Config, done chan bool, wg *sync.WaitGroup, 
 	history := make([]Record, 0, 1024)
 	ts := time.Now()
 	conn, err := websocket.DialConfig(cfg)
-	fmt.Printf("%d: Connected\n", idx)
-	latency := time.Since(ts).Seconds()
-	history = append(history, Record{Event: HandShake, TimeStamp: ts.UnixNano(), Latency: latency})
 
 	if err != nil {
 		log.Printf("Error dialing: %v\n", err)
@@ -47,6 +44,9 @@ func client(idx int, cfg *websocket.Config, done chan bool, wg *sync.WaitGroup, 
 		output <- history
 		return
 	}
+	latency := time.Since(ts).Seconds()
+	fmt.Printf("%d: Connected\n", idx)
+	history = append(history, Record{Event: HandShake, TimeStamp: ts.UnixNano(), Latency: latency})
 
 loop:
 	for {
