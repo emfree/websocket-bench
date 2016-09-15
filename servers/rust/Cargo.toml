@@ -5,3 +5,12 @@ authors = ["emfree <freemaneben@gmail.com>"]
 
 [dependencies]
 websocket = "*"
+
+[profile.release]
+opt-level = 3
+debug = true
+rpath = false
+lto = false
+debug-assertions = false
+codegen-units = 1
+panic = "unwind"

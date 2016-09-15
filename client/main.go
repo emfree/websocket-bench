@@ -71,6 +71,9 @@ loop:
 				history = append(history, Record{Event: Error, TimeStamp: ts.UnixNano(), Latency: 0})
 				break loop
 			}
+			if respLength != 33 {
+				log.Printf("Got malformed response of length %d\n", respLength)
+			}
 			tid, err := strconv.Atoi(strings.TrimSpace(string(msg[:respLength])))
 			if err != nil {
 				tid = 0
