@@ -5,4 +5,3 @@ authors = ["emfree <freemaneben@gmail.com>"]
 
 [dependencies]
 websocket = "*"
-libc = "*"
